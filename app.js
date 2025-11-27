@@ -544,60 +544,80 @@ class GradingSystem {
         container.innerHTML = html;
     }
 
-    // Copia todo esto y pégalo en lugar de tu vieja función generatePDFReport
-generatePDFReport() {
-    // 1. Validamos que haya materia seleccionada
-    const selectedSubjectIndex = document.getElementById('reportSubjectSelect').value;
-    if (selectedSubjectIndex === '') {
-        this.showAlert('Por favor selecciona una materia', 'error');
-        return;
-    }
-
-    // 2. Obtenemos los datos
-    const subjectIndex = parseInt(selectedSubjectIndex);
-    const subject = this.subjects[subjectIndex];
-    const reportData = this.getSubjectData(subjectIndex);
-    
-    if (reportData.length === 0) {
-        this.showAlert('No hay datos para generar el reporte', 'warning');
-        return;
-    }
-
-    // 3. Iniciamos el PDF
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    // 4. Creamos la tabla automática (Aquí ocurre la magia)
-    doc.autoTable({
-        // Encabezados de las columnas
-        head: [['Estudiante', 'P1', 'P2', 'P3', 'Prom', 'Total', 'Estatus']],
-        // Los datos de los alumnos
-        body: reportData.map(st => [
-            st.name, st.grade1, st.grade2, st.grade3, st.average, st.total, st.status
-        ]),
-        // Diseño (Colores y posición)
-        startY: 40, // Bajamos la tabla para que quepa el título
-        theme: 'grid', // Le ponemos bordes
-        headStyles: { fillColor: [33, 128, 141] }, // Color 'Teal' de tu diseño
+     // Report Management
+    generatePDFReport() {
+        const selectedSubjectIndex = document.getElementById('reportSubjectSelect').value;
         
-        // Esto dibuja el Título en cada página
-        didDrawPage: function (data) {
-            doc.setFontSize(18);
-            doc.setTextColor(33, 128, 141);
-            doc.text('Reporte de Calificaciones', 14, 20); // Título grande
-            
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text(`Materia: ${subject}`, 14, 30); // Subtítulo
-            doc.text(`Docente: ${app.currentUser.fullName}`, 14, 35);
+        if (selectedSubjectIndex === '') {
+            this.showAlert('Por favor selecciona una materia', 'error');
+            return;
         }
-    });
 
-    // 5. Guardamos el archivo
-    doc.save(`reporte_final.pdf`);
-    this.showAlert('PDF generado con éxito', 'success');
-}
+        const subjectIndex = parseInt(selectedSubjectIndex);
+        const subject = this.subjects[subjectIndex];
+        const reportData = this.getSubjectData(subjectIndex);
+        
+        if (reportData.length === 0) {
+            this.showAlert('No hay estudiantes con calificaciones en esta materia', 'warning');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Header
+        doc.setFontSize(18);
+        doc.text('Reporte de Calificaciones', 105, 20, { align: 'center' });
+        doc.setFontSize(14);
+        doc.text(`Materia: ${subject}`, 105, 30, { align: 'center' });
+        doc.text(`Docente: ${this.currentUser.fullName}`, 105, 40, { align: 'center' });
+        doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 105, 50, { align: 'center' });
+        
+        // Table
+        let y = 70;
+        doc.setFontSize(10);
+        
+        // Headers
+        doc.text('Estudiante', 20, y);
+        doc.text('P1', 80, y);
+        doc.text('P2', 95, y);
+        doc.text('P3', 110, y);
+        doc.text('Prom', 125, y);
+        doc.text('Total', 145, y);
+        doc.text('Estatus', 165, y);
+        
+        y += 10;
+        
+        reportData.forEach(student => {
+            doc.text(student.name, 20, y);
+            doc.text(student.grade1.toString(), 80, y);
+            doc.text(student.grade2.toString(), 95, y);
+            doc.text(student.grade3.toString(), 110, y);
+            doc.text(student.average, 125, y);
+            doc.text(student.total, 145, y);
+            doc.text(student.status, 165, y);
+            y += 8;
+        });
+        
+        doc.save(`reporte_${subject.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+        this.showAlert('PDF generado exitosamente', 'success');
+    }
+
     printReport() {
+        const selectedSubjectIndex = document.getElementById('reportSubjectSelect').value;
+        
+        if (selectedSubjectIndex === '') {
+            this.showAlert('Por favor selecciona una materia', 'error');
+            return;
+        }
+
+        const subjectIndex = parseInt(selectedSubjectIndex);
+        this.generateReportPreview(subjectIndex);
+        
+        setTimeout(() => {
+            window.print();
+        }, 500);
+    }    printReport() {
         window.print();
     }
     
